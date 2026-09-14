@@ -49,3 +49,7 @@ $WRANGLER deploy
 say "Done."
 echo "      Sign in at the URL above with omar@casacavco.com"
 echo "      To change a password later, run step 5 again for that address."
+echo
+echo "      NOTE: copy the https://...workers.dev address printed above into"
+echo "      VITE_API_BASE in .github/workflows/package.yml before building the"
+echo "      Windows, Linux or Android apps — they need to know where to call."

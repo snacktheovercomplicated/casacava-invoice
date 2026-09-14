@@ -17,8 +17,15 @@ on:
 
 # The packaged apps talk to the deployed Worker, which is a different origin
 # from the app itself, so they need the API address compiled in.
+#
+# !! This must be the real address `wrangler deploy` prints. A workers.dev
+# !! address includes your account's own subdomain, so it will look like
+# !! https://casacava-invoice.SOMETHING.workers.dev — the value below is a
+# !! placeholder and the packaged apps will not reach the server until it is
+# !! corrected. The web version is unaffected: it is served by the Worker
+# !! itself and so is same-origin.
 env:
-  VITE_API_BASE: https://casacava-invoice.workers.dev
+  VITE_API_BASE: https://casacava-invoice.REPLACE-WITH-YOUR-SUBDOMAIN.workers.dev
 
 jobs:
   windows:
