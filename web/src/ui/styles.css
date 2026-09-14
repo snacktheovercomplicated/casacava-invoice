@@ -175,6 +175,10 @@ p { margin: 0; }
 
 .app { display: flex; flex-direction: column; min-height: 100%; }
 
+/* The title bar and the tabs. On a phone they are at opposite ends of the
+   screen and this wrapper stays out of the way entirely. */
+.topbar { display: contents; }
+
 .header {
   position: sticky; inset-block-start: 0; z-index: 30;
   display: flex; align-items: center; gap: 10px;
@@ -603,12 +607,43 @@ label.btn { margin-block-end: 0; font-size: 13.5px; font-weight: 650; color: var
 
 @media (min-width: 860px) {
   .main { max-inline-size: 880px; margin-inline: auto; padding-inline: 20px; }
-  .nav {
-    position: sticky; inset-block-start: 0; inset-block-end: auto;
-    order: -1; border-block-start: 0; border-block-end: 1px solid var(--line);
-    max-inline-size: 880px; margin-inline: auto; border-radius: 0;
+
+  /*
+   * One bar, not two. The title row and the tab row share a single background
+   * that runs the full width of the window, and both line their contents up
+   * with the page column below, so the company name sits directly above the
+   * page heading. Only the wrapper is sticky: when the header and the tabs
+   * were each pinned to zero they stacked on the same 59 pixels and the tabs
+   * vanished under the title on the first scroll.
+   */
+  .topbar {
+    display: block;
+    position: sticky; inset-block-start: 0; z-index: 30;
+    background: color-mix(in srgb, var(--surface) 92%, transparent);
+    backdrop-filter: saturate(1.6) blur(12px);
+    border-block-end: 1px solid var(--line);
   }
-  .nav button { flex-direction: row; gap: 8px; font-size: 13.5px; }
+  .header, .nav {
+    max-inline-size: 880px; margin-inline: auto; padding-inline: 20px;
+    background: none; backdrop-filter: none; border: 0;
+  }
+  .header { position: static; padding-block: 12px 6px; }
+  /* 13px of that 20 is the first tab's own padding: line the tab's TEXT up
+     with the page column and let its pill bleed past the edge, rather than
+     lining the pill up and leaving the words indented. */
+  .nav {
+    position: static; inset: auto;
+    padding-block: 0 9px; padding-inline: 7px; gap: 4px;
+  }
+  /*
+   * Tabs sized to their words. Stretched to a quarter of the bar each they
+   * read as a segmented control — four equal boxes — rather than as places to
+   * go, which is what made them look pasted together.
+   */
+  .nav button {
+    flex: 0 0 auto; flex-direction: row; gap: 8px;
+    font-size: 13.5px; padding: 8px 13px; min-block-size: 38px;
+  }
   .sticky-total { inset-block-end: 16px; }
   .toast-wrap { inset-block-end: 24px; }
   .scrim { align-items: center; }

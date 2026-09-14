@@ -138,22 +138,46 @@ function Shell({ user, onSignOut }: { user: User; onSignOut: () => void }) {
 
   return (
     <div className="app">
-      <header className="header">
-        <div className="brand-mark"><IconBrand /></div>
-        <div className="grow truncate">
-          <h1>{t.appName}</h1>
-          <div className="sub">{t.appSection}</div>
-        </div>
-        <ThemeButton />
-        <button
-          type="button"
-          className="btn ghost sm"
-          onClick={() => setLang(lang === "ar" ? "en" : "ar")}
-          aria-label={t.nav.switchToArabic}
-        >
-          {t.nav.language}
-        </button>
-      </header>
+      {/*
+        On a phone the title bar is at the top and the tabs are a separate bar
+        at the bottom, so this wrapper is `display: contents` and does nothing.
+        On a desktop the two become one bar at the top, and they have to stick
+        together — two separately sticky bars both pinned to zero landed on top
+        of each other and the tabs disappeared under the title on the first
+        scroll.
+      */}
+      <div className="topbar">
+        <header className="header">
+          <div className="brand-mark"><IconBrand /></div>
+          <div className="grow truncate">
+            <h1>{t.appName}</h1>
+            <div className="sub">{t.appSection}</div>
+          </div>
+          <ThemeButton />
+          <button
+            type="button"
+            className="btn ghost sm"
+            onClick={() => setLang(lang === "ar" ? "en" : "ar")}
+            aria-label={t.nav.switchToArabic}
+          >
+            {t.nav.language}
+          </button>
+        </header>
+
+        <nav className="nav">
+          {tabs.map((tab) => (
+            <button
+              key={tab.screen}
+              type="button"
+              aria-current={current === tab.screen ? "page" : undefined}
+              onClick={() => navigate({ screen: tab.screen } as Route)}
+            >
+              {tab.icon}
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+      </div>
 
       <main className="main">
         {!sync.online
@@ -189,19 +213,6 @@ function Shell({ user, onSignOut }: { user: User; onSignOut: () => void }) {
         {route.screen === "settings" ? <Settings onSignOut={onSignOut} /> : null}
       </main>
 
-      <nav className="nav">
-        {tabs.map((tab) => (
-          <button
-            key={tab.screen}
-            type="button"
-            aria-current={current === tab.screen ? "page" : undefined}
-            onClick={() => navigate({ screen: tab.screen } as Route)}
-          >
-            {tab.icon}
-            {tab.label}
-          </button>
-        ))}
-      </nav>
     </div>
   );
 }
