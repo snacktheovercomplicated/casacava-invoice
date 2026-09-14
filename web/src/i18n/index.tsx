@@ -53,7 +53,9 @@ export function LanguageProvider(
   const dir = lang === "ar" ? "rtl" : "ltr";
 
   useEffect(() => {
-    document.documentElement.lang = lang;
+    // The region matters: a bare "en" makes the browser render date fields in
+    // US order, mm/dd/yyyy. Egypt writes dd/mm/yyyy, which both of these give.
+    document.documentElement.lang = lang === "ar" ? "ar-EG" : "en-GB";
     document.documentElement.dir = dir;
   }, [lang, dir]);
 

@@ -1,9 +1,21 @@
-import { useCallback, useEffect, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { api, ApiError, setToken } from "./api/client.ts";
 import { isOnline, outbox, watchConnection } from "./api/offline.ts";
 import type { Lang, User } from "./api/types.ts";
 import { LanguageProvider, useI18n } from "./i18n/index.tsx";
-import { Loading } from "./ui/components.tsx";
+import { ThemeProvider, useTheme } from "./ui/theme.tsx";
+import { Skeleton } from "./ui/components.tsx";
+import {
+  IconAuto,
+  IconBrand,
+  IconCustomers,
+  IconInvoices,
+  IconMoon,
+  IconOffline,
+  IconProducts,
+  IconSettings,
+  IconSun,
+} from "./ui/icons.tsx";
 import Login from "./screens/Login.tsx";
 import Invoices from "./screens/Invoices.tsx";
 import Editor from "./screens/Editor.tsx";
@@ -115,11 +127,11 @@ function Shell({ user, onSignOut }: { user: User; onSignOut: () => void }) {
   const route = useRoute();
   const sync = useSync(true);
 
-  const tabs: Array<{ screen: Route["screen"]; label: string }> = [
-    { screen: "invoices", label: t.nav.invoices },
-    { screen: "items", label: t.nav.items },
-    { screen: "customers", label: t.nav.customers },
-    { screen: "settings", label: t.nav.settings },
+  const tabs: Array<{ screen: Route["screen"]; label: string; icon: ReactNode }> = [
+    { screen: "invoices", label: t.nav.invoices, icon: <IconInvoices /> },
+    { screen: "items", label: t.nav.items, icon: <IconProducts /> },
+    { screen: "customers", label: t.nav.customers, icon: <IconCustomers /> },
+    { screen: "settings", label: t.nav.settings, icon: <IconSettings /> },
   ];
 
   const current = route.screen === "invoice" ? "invoices" : route.screen;
@@ -127,31 +139,36 @@ function Shell({ user, onSignOut }: { user: User; onSignOut: () => void }) {
   return (
     <div className="app">
       <header className="header">
-        <div>
+        <div className="brand-mark"><IconBrand /></div>
+        <div className="grow truncate">
           <h1>{t.appName}</h1>
           <div className="sub">{t.appSection}</div>
         </div>
-        <div className="spacer" />
+        <ThemeButton />
         <button
           type="button"
-          className="btn ghost"
+          className="btn ghost sm"
           onClick={() => setLang(lang === "ar" ? "en" : "ar")}
-          aria-label={t.nav.language}
+          aria-label={t.nav.switchToArabic}
         >
           {t.nav.language}
-        </button>
-        <button type="button" className="btn ghost" onClick={onSignOut}>
-          {t.nav.signOut}
         </button>
       </header>
 
       <main className="main">
         {!sync.online
-          ? <div className="banner warn">{t.status.offline}</div>
+          ? (
+            <div className="banner warn">
+              <IconOffline />
+              <span>{t.status.offline}</span>
+            </div>
+          )
           : sync.pending > 0
           ? (
             <div className="banner info">
-              {sync.syncing ? t.status.syncing : t.status.pendingChanges(sync.pending)}
+              <span>
+                {sync.syncing ? t.status.syncing : t.status.pendingChanges(sync.pending)}
+              </span>
             </div>
           )
           : null}
@@ -169,7 +186,7 @@ function Shell({ user, onSignOut }: { user: User; onSignOut: () => void }) {
           : null}
         {route.screen === "items" ? <Items /> : null}
         {route.screen === "customers" ? <Customers /> : null}
-        {route.screen === "settings" ? <Settings /> : null}
+        {route.screen === "settings" ? <Settings onSignOut={onSignOut} /> : null}
       </main>
 
       <nav className="nav">
@@ -180,11 +197,36 @@ function Shell({ user, onSignOut }: { user: User; onSignOut: () => void }) {
             aria-current={current === tab.screen ? "page" : undefined}
             onClick={() => navigate({ screen: tab.screen } as Route)}
           >
+            {tab.icon}
             {tab.label}
           </button>
         ))}
       </nav>
     </div>
+  );
+}
+
+/** Steps through automatic, light and dark, showing where it currently is. */
+function ThemeButton() {
+  const { t } = useI18n();
+  const { choice, cycle } = useTheme();
+  const icon = choice === "auto"
+    ? <IconAuto />
+    : choice === "light"
+    ? <IconSun />
+    : <IconMoon />;
+  const label = choice === "auto" ? t.theme.auto : choice === "light" ? t.theme.light : t.theme.dark;
+
+  return (
+    <button
+      type="button"
+      className={`icon-btn ${choice === "auto" ? "" : "on"}`}
+      onClick={cycle}
+      aria-label={`${t.theme.change} (${label})`}
+      title={`${t.theme.label}: ${label}`}
+    >
+      {icon}
+    </button>
   );
 }
 
@@ -214,7 +256,9 @@ function Root() {
     });
   }, []);
 
-  if (checking) return <Loading />;
+  if (checking) {
+    return <div className="main"><Skeleton rows={4} /></div>;
+  }
   if (!user) {
     return (
       <Login
@@ -241,8 +285,10 @@ export default function App() {
   }, [pendingLang]);
 
   return (
-    <LanguageProvider onChange={setPendingLang}>
-      <Root />
-    </LanguageProvider>
+    <ThemeProvider>
+      <LanguageProvider onChange={setPendingLang}>
+        <Root />
+      </LanguageProvider>
+    </ThemeProvider>
   );
 }

@@ -15,16 +15,19 @@ import type {
 import { useI18n } from "../i18n/index.tsx";
 import { governorateName } from "../i18n/governorates.ts";
 import {
-  Empty,
-  Loading,
+  EmptyState,
   Money,
   MoneyField,
   Pill,
   QuantityField,
+  SearchField,
   Sheet,
+  Skeleton,
   TextField,
+  Toast,
 } from "../ui/components.tsx";
-import { computeDocument, computeLine } from "../../../src/lib/money.ts";
+import { IconOffline, IconPlus, IconTrash } from "../ui/icons.tsx";
+import { computeDocument, computeLine, formatPiastres } from "../../../src/lib/money.ts";
 import { amountInArabicWords } from "../../../src/lib/words_ar.ts";
 import { amountInEnglishWords } from "../../../src/lib/words_en.ts";
 import { navigate } from "../App.tsx";
@@ -307,7 +310,7 @@ export default function Editor(
     }
   }
 
-  if (loading || !form) return <Loading />;
+  if (loading || !form) return <Skeleton rows={4} />;
 
   /**
    * The words under the total are in the INVOICE's language, which is chosen
@@ -324,7 +327,7 @@ export default function Editor(
     <>
       <div className="row wrap">
         <div className="grow">
-          <h2 style={{ margin: 0, fontSize: 18 }}>
+          <h2 className="section-title">
             {readOnly
               ? t.editor.viewTitle
               : server
@@ -338,8 +341,8 @@ export default function Editor(
         <Pill status={status} />
       </div>
 
-      {message ? <div className="banner info">{message}</div> : null}
-      {error ? <div className="banner bad">{error}</div> : null}
+      {message ? <Toast message={message} tone="ok" onDone={() => setMessage(null)} /> : null}
+      {error ? <Toast message={error} tone="bad" onDone={() => setError(null)} /> : null}
       {readOnly ? <div className="banner">{t.editor.readOnly}</div> : null}
       {server?.references_invoice_id
         ? (
@@ -445,9 +448,10 @@ export default function Editor(
             ? (
               <button
                 type="button"
-                className="btn"
+                className="btn sm"
                 onClick={() => setDialog("product")}
               >
+                <IconPlus size={16} />
                 {t.editor.addLine}
               </button>
             )
@@ -455,13 +459,44 @@ export default function Editor(
         </div>
 
         {form.lines.length === 0
-          ? <Empty message={t.editor.noLines} />
+          ? (
+            <EmptyState
+              message={t.editor.noLines}
+              action={!readOnly
+                ? (
+                  <button type="button" className="btn" onClick={() => setDialog("product")}>
+                    <IconPlus size={18} />
+                    {t.editor.addLine}
+                  </button>
+                )
+                : undefined}
+            />
+          )
           : (
             <div className="lines">
               {form.lines.map((line, index) => (
                 <div className="line" key={index}>
                   <div className="line-head">
-                    <div className="grow">
+                    <span className="n">{index + 1}</span>
+                    <div className="grow truncate" dir="auto" style={{ fontWeight: 650 }}>
+                      {pick(line.name_ar, line.name_en) || t.common.unnamed}
+                    </div>
+                    {!readOnly
+                      ? (
+                        <button
+                          type="button"
+                          className="icon-btn"
+                          aria-label={t.common.remove}
+                          onClick={() =>
+                            patch({ lines: form.lines.filter((_, i) => i !== index) })}
+                        >
+                          <IconTrash />
+                        </button>
+                      )
+                      : null}
+                  </div>
+                  <div className="line-body">
+                    <div style={{ marginBlockEnd: 10 }}>
                       <TextField
                         label={t.editor.lineName}
                         value={pick(line.name_ar, line.name_en)}
@@ -476,22 +511,8 @@ export default function Editor(
                           })}
                       />
                     </div>
-                    {!readOnly
-                      ? (
-                        <button
-                          type="button"
-                          className="btn ghost danger"
-                          aria-label={t.common.remove}
-                          onClick={() =>
-                            patch({ lines: form.lines.filter((_, i) => i !== index) })}
-                        >
-                          ×
-                        </button>
-                      )
-                      : null}
-                  </div>
 
-                  <div className="line-grid">
+                    <div className="line-grid">
                     <QuantityField
                       label={t.editor.quantity +
                         (pick(line.unit_ar, line.unit_en)
@@ -559,6 +580,7 @@ export default function Editor(
                         />
                       )
                       : <div />}
+                    </div>
                   </div>
 
                   <div className="line-total">
@@ -573,6 +595,17 @@ export default function Editor(
             </div>
           )}
       </div>
+
+      {totals && form.lines.length > 0
+        ? (
+          <div className="sticky-total">
+            <span className="lbl">{t.editor.grandTotal}</span>
+            <span className="val ltr">
+              {formatPiastres(totals.document.totalPiastres)} {t.common.egp}
+            </span>
+          </div>
+        )
+        : null}
 
       {/* ---- what it comes to ---- */}
       {totals
@@ -655,6 +688,7 @@ export default function Editor(
                   disabled={saving || form.lines.length === 0}
                   onClick={() => (online ? setDialog("issue") : setError(t.editor.issueOffline))}
                 >
+                  {online ? null : <IconOffline size={18} />}
                   {t.editor.issue}
                 </button>
                 <button type="button" className="btn danger block" onClick={removeDraft}>
@@ -812,14 +846,9 @@ function ProductPicker(
 
   return (
     <Sheet title={t.editor.pickProduct} onClose={onClose}>
-      <input
-        type="search"
-        value={query}
-        placeholder={t.items.searchPlaceholder}
-        onChange={(event) => setQuery(event.target.value)}
-      />
+      <SearchField value={query} onChange={setQuery} placeholder={t.items.searchPlaceholder} />
       <div style={{ marginBlockStart: 10 }}>
-        {items === null ? <Loading /> : shown.map((item) => (
+        {items === null ? <Skeleton rows={4} /> : shown.map((item) => (
           <button
             key={item.id}
             type="button"
@@ -884,15 +913,10 @@ function CustomerPicker(
 
   return (
     <Sheet title={t.editor.chooseCustomer} onClose={onClose}>
-      <input
-        type="search"
-        value={query}
-        placeholder={t.customers.searchPlaceholder}
-        onChange={(event) => setQuery(event.target.value)}
-      />
+      <SearchField value={query} onChange={setQuery} placeholder={t.customers.searchPlaceholder} />
       <div style={{ marginBlockStart: 10 }}>
-        {customers === null ? <Loading /> : shown.length === 0
-          ? <Empty message={t.customers.empty} />
+        {customers === null ? <Skeleton rows={4} /> : shown.length === 0
+          ? <EmptyState message={t.customers.empty} />
           : shown.map((customer) => (
             <button
               key={customer.id}

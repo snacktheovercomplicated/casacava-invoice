@@ -3,10 +3,13 @@ import { api, ApiError } from "../api/client.ts";
 import type { User } from "../api/types.ts";
 import { useI18n } from "../i18n/index.tsx";
 import { TextField } from "../ui/components.tsx";
+import { useTheme } from "../ui/theme.tsx";
+import { IconAuto, IconBrand, IconMoon, IconSun } from "../ui/icons.tsx";
 import { deriveClientSecret } from "../../../src/lib/password.ts";
 
 export default function Login({ onSignedIn }: { onSignedIn: (user: User) => void }) {
   const { t, lang, setLang } = useI18n();
+  const { choice, cycle } = useTheme();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -34,22 +37,30 @@ export default function Login({ onSignedIn }: { onSignedIn: (user: User) => void
 
   return (
     <div className="app">
-      <div className="header">
-        <div>
+      <header className="header">
+        <div className="brand-mark"><IconBrand /></div>
+        <div className="grow truncate">
           <h1>{t.appName}</h1>
           <div className="sub">{t.login.subtitle}</div>
         </div>
-        <div className="spacer" />
         <button
           type="button"
-          className="btn ghost"
+          className={`icon-btn ${choice === "auto" ? "" : "on"}`}
+          onClick={cycle}
+          aria-label={t.theme.change}
+        >
+          {choice === "auto" ? <IconAuto /> : choice === "light" ? <IconSun /> : <IconMoon />}
+        </button>
+        <button
+          type="button"
+          className="btn ghost sm"
           onClick={() => setLang(lang === "ar" ? "en" : "ar")}
         >
           {t.nav.language}
         </button>
-      </div>
+      </header>
 
-      <div className="main">
+      <main className="main" style={{ justifyContent: "center", paddingBlockEnd: 40 }}>
         <form className="card" onSubmit={submit}>
           <h2>{t.login.title}</h2>
           <div style={{ display: "grid", gap: 12 }}>
@@ -75,7 +86,7 @@ export default function Login({ onSignedIn }: { onSignedIn: (user: User) => void
             </button>
           </div>
         </form>
-      </div>
+      </main>
     </div>
   );
 }

@@ -398,6 +398,25 @@ interface.
 **Phone first.** Single column, 44px tap targets, safe-area padding, and a
 bottom navigation bar that stays reachable with one hand.
 
+**Light, dark, or whatever the phone is doing.** The button in the header steps
+through the three; the choice is remembered, and "automatic" follows the device
+so the app turns dark at sunset along with everything else. Every colour in
+`web/src/ui/styles.css` is a token defined once for each theme, so a component
+never needs to know which one is on.
+
+**No pure white and no pure black anywhere.** Paper is a warm off-white, ink a
+warm near-black, and the dark theme is a warm charcoal rather than a hole in the
+screen — white-on-black glares at night and flattens the brand brown next to it.
+Two brown tokens keep this honest: `--brand` is the logo colour and is
+decoration only — borders, the focus ring, the accent bar — while
+`--brand-strong` is that brown pushed until text can sit on it, or it on a tint,
+and still be read. Every pair that carries text clears 4.5:1.
+
+**The printed invoice is not themed.** It is a document, not a screen: white
+paper and dark ink whatever the app looks like. `ui:check` renders a PDF with
+the app in dark mode and counts the white pixels to prove the theme has not
+leaked into it.
+
 ## What `deno task ui:check` proves
 
 It drives a real browser and asserts on what is actually rendered, rather than
@@ -419,7 +438,8 @@ on what the code intended:
 - the printed Amount column adds up to the printed subtotal, on an invoice
   mixing percentage and fixed discounts;
 - pages after the first carry the invoice number and a page marker;
-- no invoice ends on a nearly empty page.
+- no invoice ends on a nearly empty page;
+- the printed invoice stays white paper with the app in dark mode.
 
 **On Android:** the check re-runs the PDF path with the browser emulating a
 phone — 412x915, 3x screen, Android user agent — and confirms the embedded font

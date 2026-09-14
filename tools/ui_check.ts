@@ -89,7 +89,9 @@ await send("Page.navigate", { url: `http://127.0.0.1:${PORT}/` });
 await waitFor("!!document.querySelector('form.card')", "login form");
 
 if (await evaluate("document.documentElement.dir") !== "rtl") throw new Error("not RTL");
-if (await evaluate("document.documentElement.lang") !== "ar") throw new Error("not ar");
+if (!String(await evaluate("document.documentElement.lang")).startsWith("ar")) {
+  throw new Error("not ar");
+}
 ok("boots in Arabic, document direction is rtl");
 
 const arabicTitle = await evaluate("document.querySelector('.header h1').textContent");
@@ -124,6 +126,14 @@ await evaluate(`
 `);
 await waitFor("!!document.querySelector('.nav')", "signed in, nav visible", 25000);
 ok("signs in with the real password flow (PBKDF2 on the device)");
+
+// The signed-in user carries a saved language, which may be either one. The
+// rest of this check reads Arabic labels, so put it back to Arabic first.
+if (await evaluate("document.documentElement.dir === 'ltr'")) {
+  await click("العربية");
+  await waitFor("document.documentElement.dir === 'rtl'", "back to Arabic");
+}
+ok("the signed-in user's saved language is applied, and can be switched back");
 
 // --- 4. making an invoice --------------------------------------------------
 await click("فاتورة جديدة");
@@ -705,6 +715,60 @@ if (huge.scale >= 3) {
 ok(
   `a ${huge.lines}-line invoice drops to ${huge.scale}x and still produces ` +
     `${huge.pages} pages, rather than asking a phone for a drawing it cannot hold`,
+);
+
+/* ---- the printed invoice must stay white paper in dark mode -------------- */
+
+const darkPaper = await evaluate(`
+  (async () => {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    const auth = { authorization: 'Bearer ' + ${JSON.stringify(appToken)} };
+    const doc = await (await fetch('/api/invoices/${longId}', { headers: auth })).json();
+    const cfg = await (await fetch('/api/settings', { headers: auth })).json();
+    const { blob } = await globalThis.__casacavaPdf.renderInvoicePdf({
+      invoice: doc.invoice, lines: doc.lines.slice(0, 3),
+      settings: doc.invoice.company_snapshot ?? cfg.settings,
+    });
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    let binary = '';
+    for (const byte of bytes) binary += String.fromCharCode(byte);
+    document.documentElement.removeAttribute('data-theme');
+    return btoa(binary);
+  })()
+`);
+
+const darkDir = await Deno.makeTempDir();
+await Deno.writeFile(
+  `${darkDir}/dark.pdf`,
+  Uint8Array.from(atob(darkPaper), (c) => c.charCodeAt(0)),
+);
+const darkPpm = new Deno.Command("pdftoppm", {
+  args: ["-r", "60", "-f", "1", "-l", "1", `${darkDir}/dark.pdf`],
+  stdout: "piped",
+}).outputSync();
+const darkImage = readPpm(darkPpm.stdout);
+
+let whitePixels = 0;
+let allPixels = 0;
+for (let i = 0; i + 2 < darkImage.rgb.length; i += 3) {
+  allPixels++;
+  if (darkImage.rgb[i] > 230 && darkImage.rgb[i + 1] > 230 && darkImage.rgb[i + 2] > 230) {
+    whitePixels++;
+  }
+}
+await Deno.remove(darkDir, { recursive: true });
+
+// An invoice is a document, not a screen. If the theme leaked into it, the
+// page would come out mostly dark.
+if (whitePixels / allPixels < 0.8) {
+  throw new Error(
+    `the dark theme leaked into the printed invoice: only ` +
+      `${((whitePixels / allPixels) * 100).toFixed(0)}% of the page is white`,
+  );
+}
+ok(
+  `the printed invoice stays white paper even with the app in dark mode ` +
+    `(${((whitePixels / allPixels) * 100).toFixed(0)}% white)`,
 );
 
 /* ========================================================================== */

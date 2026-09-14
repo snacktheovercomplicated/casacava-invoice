@@ -4,7 +4,15 @@ import { readThrough } from "../api/offline.ts";
 import type { Customer, Lang } from "../api/types.ts";
 import { useI18n } from "../i18n/index.tsx";
 import { GOVERNORATES } from "../i18n/governorates.ts";
-import { Empty, Loading, Sheet, TextField } from "../ui/components.tsx";
+import {
+  EmptyState,
+  SearchField,
+  Sheet,
+  Skeleton,
+  TextField,
+  Toast,
+} from "../ui/components.tsx";
+import { IconCustomers, IconPlus } from "../ui/icons.tsx";
 
 const blank = (): Partial<Customer> => ({
   name_ar: "",
@@ -61,27 +69,38 @@ export default function Customers() {
   return (
     <>
       <div className="row wrap">
-        <h2 className="grow" style={{ margin: 0, fontSize: 18 }}>{t.customers.title}</h2>
+        <h2 className="section-title grow">{t.customers.title}</h2>
         <button
           type="button"
           className="btn primary"
           onClick={() => setEditing({ id: crypto.randomUUID(), customer: blank() })}
         >
+          <IconPlus size={18} />
           {t.customers.newCustomer}
         </button>
       </div>
 
       <div className="card">
-        <input
-          type="search"
-          value={query}
-          placeholder={t.customers.searchPlaceholder}
-          onChange={(event) => setQuery(event.target.value)}
-        />
+        <SearchField value={query} onChange={setQuery} placeholder={t.customers.searchPlaceholder} />
       </div>
 
-      {customers === null ? <Loading /> : shown.length === 0
-        ? <Empty message={t.customers.empty} />
+      {customers === null ? <Skeleton rows={5} /> : shown.length === 0
+        ? (
+          <EmptyState
+            glyph={<IconCustomers size={24} />}
+            message={t.customers.empty}
+            action={
+              <button
+                type="button"
+                className="btn primary"
+                onClick={() => setEditing({ id: crypto.randomUUID(), customer: blank() })}
+              >
+                <IconPlus size={18} />
+                {t.customers.newCustomer}
+              </button>
+            }
+          />
+        )
         : (
           <div className="list">
             {shown.map((customer) => (
@@ -92,7 +111,7 @@ export default function Customers() {
                 onClick={() => setEditing({ id: customer.id, customer: { ...customer } })}
               >
                 <div className="grow">
-                  <div className="title">{pick(customer.name_ar, customer.name_en)}</div>
+                  <div className="title" dir="auto">{pick(customer.name_ar, customer.name_en)}</div>
                   <div className="meta ltr">{customer.phone ?? ""}</div>
                 </div>
                 <span className="pill">
@@ -109,7 +128,6 @@ export default function Customers() {
         ? (
           <Sheet title={t.customers.newCustomer} onClose={() => setEditing(null)}>
             <div style={{ display: "grid", gap: 10 }}>
-              {error ? <div className="banner bad">{error}</div> : null}
               <TextField
                 label={t.customers.nameAr}
                 value={editing.customer.name_ar ?? ""}
@@ -222,6 +240,7 @@ export default function Customers() {
               </div>
             </div>
 
+            {error ? <Toast message={error} tone="bad" onDone={() => setError(null)} /> : null}
             <div className="actions">
               <button type="button" className="btn" onClick={() => setEditing(null)}>
                 {t.common.cancel}

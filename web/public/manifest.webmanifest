@@ -3,8 +3,8 @@
   "short_name": "Casa Cava",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#a06e4e",
+  "background_color": "#efe9e3",
+  "theme_color": "#faf7f3",
   "dir": "auto",
   "icons": []
 }

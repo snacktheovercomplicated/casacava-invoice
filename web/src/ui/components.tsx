@@ -8,6 +8,7 @@ import {
   parseQuantityToMilli,
 } from "../../../src/lib/money.ts";
 import { useI18n } from "../i18n/index.tsx";
+import { IconSearch } from "./icons.tsx";
 
 /** An amount, always left-to-right and right-aligned, even in an Arabic layout. */
 export function Money({ piastres, bold }: { piastres: number; bold?: boolean }) {
@@ -186,4 +187,109 @@ export function Loading() {
 
 export function Empty({ message }: { message: string }) {
   return <div className="empty">{message}</div>;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Feedback                                                                   */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * A short message that does not move anything.
+ *
+ * Confirmations used to be a banner inserted at the top of the screen, which
+ * pushed everything down at the moment you were reading it. This floats above
+ * instead and takes itself away.
+ */
+export function Toast(
+  { message, tone = "plain", onDone }: {
+    message: string;
+    tone?: "plain" | "ok" | "bad";
+    onDone: () => void;
+  },
+) {
+  useEffect(() => {
+    const timer = setTimeout(onDone, tone === "bad" ? 6000 : 3000);
+    return () => clearTimeout(timer);
+  }, [message, tone, onDone]);
+
+  return (
+    <div className="toast-wrap">
+      <div className={`toast ${tone === "plain" ? "" : tone}`} role="status">
+        {message}
+      </div>
+    </div>
+  );
+}
+
+/** Grey shapes the size of what is coming, instead of the word "Loading". */
+export function Skeleton({ rows = 3 }: { rows?: number }) {
+  return (
+    <div className="list" aria-hidden="true">
+      {Array.from({ length: rows }, (_, index) => (
+        <div
+          key={index}
+          className="skeleton"
+          style={{ blockSize: 68, opacity: 1 - index * 0.12 }}
+        />
+      ))}
+    </div>
+  );
+}
+
+export function EmptyState(
+  { glyph, message, action }: { glyph?: ReactNode; message: string; action?: ReactNode },
+) {
+  return (
+    <div className="empty">
+      {glyph ? <div className="glyph">{glyph}</div> : null}
+      <div>{message}</div>
+      {action}
+    </div>
+  );
+}
+
+/** A search box with the magnifier inside it. */
+export function SearchField(
+  { value, onChange, placeholder }: {
+    value: string;
+    onChange: (value: string) => void;
+    placeholder: string;
+  },
+) {
+  return (
+    <div className="search">
+      <IconSearch />
+      <input
+        type="search"
+        value={value}
+        placeholder={placeholder}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    </div>
+  );
+}
+
+/** Two or three choices shown side by side, for settings that are not lists. */
+export function Segmented<T extends string>(
+  { value, options, onChange }: {
+    value: T;
+    options: Array<{ value: T; label: string; icon?: ReactNode }>;
+    onChange: (value: T) => void;
+  },
+) {
+  return (
+    <div className="seg" role="group">
+      {options.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          aria-pressed={value === option.value}
+          onClick={() => onChange(option.value)}
+        >
+          {option.icon}
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
 }

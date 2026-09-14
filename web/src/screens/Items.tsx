@@ -3,7 +3,17 @@ import { api, ApiError } from "../api/client.ts";
 import { readThrough } from "../api/offline.ts";
 import type { Item } from "../api/types.ts";
 import { useI18n } from "../i18n/index.tsx";
-import { Empty, Loading, Money, MoneyField, Sheet, TextField } from "../ui/components.tsx";
+import {
+  EmptyState,
+  Money,
+  MoneyField,
+  SearchField,
+  Sheet,
+  Skeleton,
+  TextField,
+  Toast,
+} from "../ui/components.tsx";
+import { IconPlus, IconProducts } from "../ui/icons.tsx";
 
 const blank = (): Partial<Item> => ({
   name_ar: "",
@@ -62,36 +72,46 @@ export default function Items() {
   return (
     <>
       <div className="row wrap">
-        <h2 className="grow" style={{ margin: 0, fontSize: 18 }}>{t.items.title}</h2>
+        <h2 className="section-title grow">{t.items.title}</h2>
         <button
           type="button"
           className="btn primary"
           onClick={() => setEditing({ id: crypto.randomUUID(), item: blank() })}
         >
+          <IconPlus size={18} />
           {t.items.newItem}
         </button>
       </div>
 
       <div className="card">
-        <input
-          type="search"
-          value={query}
-          placeholder={t.items.searchPlaceholder}
-          onChange={(event) => setQuery(event.target.value)}
-        />
+        <SearchField value={query} onChange={setQuery} placeholder={t.items.searchPlaceholder} />
         <label className="row" style={{ marginBlockStart: 10, gap: 8 }}>
           <input
             type="checkbox"
             checked={showHidden}
-            style={{ inlineSize: "auto", minHeight: 0 }}
             onChange={(event) => setShowHidden(event.target.checked)}
           />
           <span>{t.items.showInactive}</span>
         </label>
       </div>
 
-      {items === null ? <Loading /> : shown.length === 0
-        ? <Empty message={t.items.empty} />
+      {items === null ? <Skeleton rows={5} /> : shown.length === 0
+        ? (
+          <EmptyState
+            glyph={<IconProducts size={24} />}
+            message={t.items.empty}
+            action={
+              <button
+                type="button"
+                className="btn primary"
+                onClick={() => setEditing({ id: crypto.randomUUID(), item: blank() })}
+              >
+                <IconPlus size={18} />
+                {t.items.newItem}
+              </button>
+            }
+          />
+        )
         : (
           <div className="list">
             {shown.map((item) => (
@@ -102,7 +122,7 @@ export default function Items() {
                 onClick={() => setEditing({ id: item.id, item: { ...item } })}
               >
                 <div className="grow">
-                  <div className="title">{pick(item.name_ar, item.name_en)}</div>
+                  <div className="title" dir="auto">{pick(item.name_ar, item.name_en)}</div>
                   <div className="meta">
                     {pick(item.category_ar, item.category_en)}
                     {item.is_active === 0 ? ` · ${t.items.hidden}` : ""}
@@ -128,7 +148,6 @@ export default function Items() {
         ? (
           <Sheet title={t.items.newItem} onClose={() => setEditing(null)}>
             <div style={{ display: "grid", gap: 10 }}>
-              {error ? <div className="banner bad">{error}</div> : null}
               <TextField
                 label={t.items.nameAr}
                 value={editing.item.name_ar ?? ""}
@@ -232,6 +251,7 @@ export default function Items() {
               </div>
             </div>
 
+            {error ? <Toast message={error} tone="bad" onDone={() => setError(null)} /> : null}
             <div className="actions">
               <button type="button" className="btn" onClick={() => setEditing(null)}>
                 {t.common.cancel}

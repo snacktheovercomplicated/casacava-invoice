@@ -18,6 +18,16 @@ const en = {
     settings: "Settings",
     signOut: "Sign out",
     language: "العربية",
+    switchToArabic: "Switch to Arabic",
+  },
+
+  theme: {
+    label: "Appearance",
+    auto: "Automatic",
+    light: "Light",
+    dark: "Dark",
+    autoHint: "Follows your phone or computer",
+    change: "Change appearance",
   },
 
   common: {

@@ -3,7 +3,29 @@ import { api, ApiError } from "../api/client.ts";
 import { readThrough } from "../api/offline.ts";
 import type { Lang, Settings as SettingsRow } from "../api/types.ts";
 import { useI18n } from "../i18n/index.tsx";
-import { Loading, TextField } from "../ui/components.tsx";
+import { Segmented, Skeleton, TextField, Toast } from "../ui/components.tsx";
+import { useTheme } from "../ui/theme.tsx";
+import { IconAuto, IconMoon, IconSun } from "../ui/icons.tsx";
+
+/** Light, dark, or follow the device. */
+function Appearance() {
+  const { t } = useI18n();
+  const { choice, setChoice } = useTheme();
+  return (
+    <>
+      <Segmented
+        value={choice}
+        onChange={setChoice}
+        options={[
+          { value: "auto" as const, label: t.theme.auto, icon: <IconAuto size={16} /> },
+          { value: "light" as const, label: t.theme.light, icon: <IconSun size={16} /> },
+          { value: "dark" as const, label: t.theme.dark, icon: <IconMoon size={16} /> },
+        ]}
+      />
+      <div className="tiny muted" style={{ marginBlockStart: 8 }}>{t.theme.autoHint}</div>
+    </>
+  );
+}
 
 /**
  * Two fields that are the same thing in two languages, side by side, with a
@@ -52,7 +74,7 @@ function BilingualPair(
   );
 }
 
-export default function Settings() {
+export default function Settings({ onSignOut }: { onSignOut: () => void }) {
   const { t } = useI18n();
   const [settings, setSettings] = useState<SettingsRow | null>(null);
   const [saving, setSaving] = useState(false);
@@ -65,7 +87,7 @@ export default function Settings() {
       .catch(() => setSettings(null));
   }, []);
 
-  if (!settings) return <Loading />;
+  if (!settings) return <Skeleton rows={3} />;
 
   const set = (changes: Partial<SettingsRow>) => {
     setSettings({ ...settings, ...changes });
@@ -95,9 +117,14 @@ export default function Settings() {
 
   return (
     <>
-      <h2 style={{ margin: 0, fontSize: 18 }}>{t.settings.title}</h2>
-      {message ? <div className="banner info">{message}</div> : null}
-      {error ? <div className="banner bad">{error}</div> : null}
+      <h2 className="section-title">{t.settings.title}</h2>
+      {message ? <Toast message={message} tone="ok" onDone={() => setMessage(null)} /> : null}
+      {error ? <Toast message={error} tone="bad" onDone={() => setError(null)} /> : null}
+
+      <div className="card">
+        <h2>{t.theme.label}</h2>
+        <Appearance />
+      </div>
 
       <div className="card">
         <h2>{t.settings.company}</h2>
@@ -158,14 +185,19 @@ export default function Settings() {
                 </div>
               )
               : null}
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                if (file) readLogo(file);
-              }}
-            />
+            <label className="btn sm">
+              {t.settings.logoChoose}
+              <input
+                type="file"
+                accept="image/*"
+                hidden
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) readLogo(file);
+                  event.target.value = "";
+                }}
+              />
+            </label>
           </div>
         </div>
       </div>
@@ -233,6 +265,10 @@ export default function Settings() {
 
       <button type="button" className="btn primary block" disabled={saving} onClick={save}>
         {saving ? t.common.saving : t.common.save}
+      </button>
+
+      <button type="button" className="btn block" onClick={onSignOut}>
+        {t.nav.signOut}
       </button>
     </>
   );

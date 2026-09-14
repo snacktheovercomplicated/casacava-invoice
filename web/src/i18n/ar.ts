@@ -17,6 +17,16 @@ const ar: Strings = {
     settings: "الإعدادات",
     signOut: "تسجيل الخروج",
     language: "English",
+    switchToArabic: "التبديل إلى الإنجليزية",
+  },
+
+  theme: {
+    label: "المظهر",
+    auto: "تلقائي",
+    light: "فاتح",
+    dark: "داكن",
+    autoHint: "يتبع إعداد هاتفك أو جهازك",
+    change: "تغيير المظهر",
   },
 
   common: {

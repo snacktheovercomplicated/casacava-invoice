@@ -3,11 +3,12 @@ import { api } from "../api/client.ts";
 import { readThrough } from "../api/offline.ts";
 import type { Invoice, UnexplainedNumber, UnusedNumber } from "../api/types.ts";
 import { useI18n } from "../i18n/index.tsx";
-import { Empty, Loading, Money, Pill } from "../ui/components.tsx";
+import { EmptyState, Money, Pill, SearchField, Skeleton } from "../ui/components.tsx";
+import { IconDocument, IconPlus } from "../ui/icons.tsx";
 import { navigate } from "../App.tsx";
 
 export default function Invoices({ online }: { online: boolean }) {
-  const { t, pick, lang } = useI18n();
+  const { t, pick } = useI18n();
 
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("");
@@ -40,22 +41,22 @@ export default function Invoices({ online }: { online: boolean }) {
   return (
     <>
       <div className="row wrap">
-        <h2 className="grow" style={{ margin: 0, fontSize: 18 }}>{t.invoices.title}</h2>
+        <h2 className="section-title grow">{t.invoices.title}</h2>
         <button
           type="button"
           className="btn primary"
           onClick={() => navigate({ screen: "invoice", id: crypto.randomUUID() })}
         >
+          <IconPlus size={18} />
           {t.invoices.newInvoice}
         </button>
       </div>
 
       <div className="card">
-        <input
-          type="search"
+        <SearchField
           value={query}
+          onChange={setQuery}
           placeholder={t.invoices.searchPlaceholder}
-          onChange={(event) => setQuery(event.target.value)}
         />
         <div className="line-grid" style={{ marginBlockStart: 10 }}>
           <div>
@@ -112,8 +113,23 @@ export default function Invoices({ online }: { online: boolean }) {
 
       <UnusedNumbers online={online} />
 
-      {invoices === null ? <Loading /> : invoices.length === 0
-        ? <Empty message={filtering ? t.invoices.emptyFiltered : t.invoices.empty} />
+      {invoices === null ? <Skeleton rows={4} /> : invoices.length === 0
+        ? (
+          <EmptyState
+            glyph={<IconDocument size={24} />}
+            message={filtering ? t.invoices.emptyFiltered : t.invoices.empty}
+            action={filtering ? null : (
+              <button
+                type="button"
+                className="btn primary"
+                onClick={() => navigate({ screen: "invoice", id: crypto.randomUUID() })}
+              >
+                <IconPlus size={18} />
+                {t.invoices.newInvoice}
+              </button>
+            )}
+          />
+        )
         : (
           <div className="list">
             {!fresh ? <div className="banner warn">{t.status.offline}</div> : null}
@@ -125,7 +141,7 @@ export default function Invoices({ online }: { online: boolean }) {
                 onClick={() => navigate({ screen: "invoice", id: invoice.id })}
               >
                 <div className="grow">
-                  <div className="title">
+                  <div className="title" dir="auto">
                     {pick(invoice.customer_name_ar, invoice.customer_name_en) ||
                       t.common.unnamed}
                   </div>
@@ -141,17 +157,16 @@ export default function Invoices({ online }: { online: boolean }) {
                       : null}
                   </div>
                 </div>
-                <div className="end">
-                  <Money piastres={invoice.total_piastres} bold />
-                  <div style={{ marginBlockStart: 4 }}>
-                    <Pill status={invoice.doc_status} />
-                  </div>
+                <div className="end col" style={{ gap: 5, alignItems: "flex-end" }}>
+                  <span className="amount">
+                    <Money piastres={invoice.total_piastres} />
+                  </span>
+                  <Pill status={invoice.doc_status} />
                 </div>
               </button>
             ))}
           </div>
         )}
-      <div className="tiny muted end">{lang === "ar" ? "" : ""}</div>
     </>
   );
 }
