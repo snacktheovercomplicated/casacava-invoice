@@ -114,9 +114,24 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-      - uses: android-actions/setup-android@v4
-      - name: Install the Android NDK
-        run: sdkmanager "ndk;27.2.12479018"
+      # No setup-android action: the runner image already carries the whole SDK
+      # at /usr/local/lib/android/sdk with three NDKs preinstalled, and the
+      # action failed in 8 seconds on both v3 and v4. Pick the r27 NDK that is
+      # already there rather than asking sdkmanager to download a version that
+      # is not — 27.2.12479018 was never on this image.
+      - name: Find the NDK the image already has
+        run: |
+          NDK_DIR=$(ls -d "$ANDROID_HOME"/ndk/27.* 2>/dev/null | sort -V | tail -1)
+          if [ -z "$NDK_DIR" ]; then
+            NDK_DIR=$(ls -d "$ANDROID_HOME"/ndk/* 2>/dev/null | sort -V | tail -1)
+          fi
+          if [ -z "$NDK_DIR" ]; then
+            echo "::error::No NDK found under $ANDROID_HOME/ndk"
+            ls -la "$ANDROID_HOME" || true
+            exit 1
+          fi
+          echo "Using NDK $NDK_DIR"
+          echo "NDK_HOME=$NDK_DIR" >> "$GITHUB_ENV"
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
@@ -126,8 +141,6 @@ jobs:
       - name: Build the web app
         run: deno task build:web
       - name: Build the APK
-        env:
-          NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.2.12479018
         shell: bash
         run: |
           set -o pipefail

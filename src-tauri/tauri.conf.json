@@ -6,8 +6,8 @@
   "build": {
     "frontendDist": "../web/dist",
     "devUrl": "http://localhost:5173",
-    "beforeDevCommand": "deno task dev:web",
-    "beforeBuildCommand": "deno task build:web"
+    "beforeDevCommand": "deno run -A npm:vite",
+    "beforeBuildCommand": "deno run -A npm:vite build"
   },
   "app": {
     "windows": [
