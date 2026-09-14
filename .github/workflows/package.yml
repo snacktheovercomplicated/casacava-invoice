@@ -52,7 +52,12 @@ jobs:
 
   linux:
     name: Linux AppImage
-    runs-on: ubuntu-22.04
+    # 24.04, not 22.04: GitHub begins deprecating the Ubuntu 22 image on
+    # 2026-09-17 and fails jobs that use it during the brownout periods, so a
+    # workflow pinned to it would start failing at random for no reason of its
+    # own. An AppImage built here needs glibc 2.39 or newer on the machine that
+    # runs it — every current distribution has it.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: denoland/setup-deno@v2
@@ -79,7 +84,7 @@ jobs:
 
   android:
     name: Android APK
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: denoland/setup-deno@v2
