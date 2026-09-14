@@ -31,18 +31,28 @@ jobs:
     name: Windows installer
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
       - uses: dtolnay/rust-toolchain@stable
-      - uses: swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
       - name: Build the web app
         run: deno task build:web
       - name: Build the installer
-        run: deno run -A npm:@tauri-apps/cli build --bundles nsis
+        shell: bash
+        run: |
+          # Tauri's own message is the only thing that explains a failure here,
+          # and a private repository's logs cannot be read without signing in.
+          # Repeat the tail of it as a workflow error, which shows up as an
+          # annotation on the run page and in the API.
+          set -o pipefail
+          if ! deno run -A npm:@tauri-apps/cli build --verbose --bundles nsis 2>&1 | tee build.log; then
+            echo "::error::$(tail -c 3000 build.log | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g')"
+            exit 1
+          fi
       - uses: actions/upload-artifact@v4
         with:
           name: CasaCava-Invoices-Windows
@@ -59,12 +69,12 @@ jobs:
     # runs it — every current distribution has it.
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
       - uses: dtolnay/rust-toolchain@stable
-      - uses: swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
       - name: Install the GTK and WebKit libraries Tauri needs
@@ -75,7 +85,17 @@ jobs:
       - name: Build the web app
         run: deno task build:web
       - name: Build the AppImage
-        run: deno run -A npm:@tauri-apps/cli build --bundles appimage
+        shell: bash
+        run: |
+          # Tauri's own message is the only thing that explains a failure here,
+          # and a private repository's logs cannot be read without signing in.
+          # Repeat the tail of it as a workflow error, which shows up as an
+          # annotation on the run page and in the API.
+          set -o pipefail
+          if ! deno run -A npm:@tauri-apps/cli build --verbose --bundles appimage 2>&1 | tee build.log; then
+            echo "::error::$(tail -c 3000 build.log | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g')"
+            exit 1
+          fi
       - uses: actions/upload-artifact@v4
         with:
           name: CasaCava-Invoices-Linux
@@ -86,21 +106,21 @@ jobs:
     name: Android APK
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: "17"
-      - uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@v4
       - name: Install the Android NDK
         run: sdkmanager "ndk;27.2.12479018"
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
-      - uses: swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
       - name: Build the web app
@@ -108,9 +128,14 @@ jobs:
       - name: Build the APK
         env:
           NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.2.12479018
+        shell: bash
         run: |
-          deno run -A npm:@tauri-apps/cli android init
-          deno run -A npm:@tauri-apps/cli android build --apk --debug
+          set -o pipefail
+          if ! { deno run -A npm:@tauri-apps/cli android init \
+                 && deno run -A npm:@tauri-apps/cli android build --apk --debug; } 2>&1 | tee build.log; then
+            echo "::error::$(tail -c 3000 build.log | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g')"
+            exit 1
+          fi
       - uses: actions/upload-artifact@v4
         with:
           name: CasaCava-Invoices-Android
