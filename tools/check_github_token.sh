@@ -80,6 +80,32 @@ else
 fi
 rm -f /tmp/gh-body.$$
 
+# This repository contains .github/workflows/package.yml. GitHub refuses any
+# push that touches a workflow file unless the token is allowed to, and the
+# refusal happens at the END of the push, after everything is uploaded.
+echo
+echo "4. Is it allowed to touch .github/workflows?"
+SCOPES=$(curl -sS -D - -o /dev/null -H "Authorization: Bearer $TOKEN" \
+  https://api.github.com/user | tr -d '\r' | grep -i '^x-oauth-scopes:' | cut -d' ' -f2-)
+case "$KIND" in
+  classic)
+    if printf '%s' "$SCOPES" | grep -q 'workflow'; then
+      echo "   YES"
+    else
+      echo "   NO — a classic token also needs the 'workflow' scope."
+      echo "   Scopes it has: ${SCOPES:-none}"
+      echo "   Regenerate at https://github.com/settings/tokens/new with repo + workflow."
+      exit 1
+    fi
+    ;;
+  *)
+    echo "   Cannot be read from the API for a fine-grained token."
+    echo "   Make sure it has Repository permissions -> Workflows: Read and write."
+    echo "   Without it the push fails at the very end with:"
+    echo "     refusing to allow a Personal Access Token to create or update workflow"
+    ;;
+esac
+
 echo
 echo "The token is good. The problem was in how it reached git, not the token."
 echo
