@@ -20,10 +20,19 @@ say "1/6  Checking you are signed in to Cloudflare"
 $WRANGLER whoami >/dev/null
 
 say "2/6  Creating the tables"
-for file in db/migrations/*.sql; do
-  echo "      $file"
-  $WRANGLER d1 execute "$DB" --remote --file="$file" --yes >/dev/null
-done
+# CREATE TABLE fails if the table is already there, so a second run of this
+# script would stop here. Check first, and skip if the schema is in place.
+EXISTING=$($WRANGLER d1 execute "$DB" --remote --json --yes \
+  --command "SELECT name FROM sqlite_master WHERE type='table' AND name='invoices'" \
+  2>/dev/null | grep -c '"invoices"' || true)
+if [ "$EXISTING" -gt 0 ]; then
+  echo "      already there, skipping"
+else
+  for file in db/migrations/*.sql; do
+    echo "      $file"
+    $WRANGLER d1 execute "$DB" --remote --file="$file" --yes >/dev/null
+  done
+fi
 
 say "3/6  Loading your company details and the number series"
 $WRANGLER d1 execute "$DB" --remote --file=db/seed_company.sql --yes >/dev/null

@@ -52,16 +52,30 @@ if (uiLanguage !== "ar" && uiLanguage !== "en") {
   Deno.exit(1);
 }
 
-const password = promptHidden(`Password for ${email}: `);
-if (password.length < 10) {
-  console.error("Use at least 10 characters. This is the only lock on the data.");
-  Deno.exit(1);
+/**
+ * Ask until the answer is usable. Bailing out on a short password meant the
+ * whole setup script stopped and had to be started again from the beginning.
+ */
+function askForPassword(): string {
+  while (true) {
+    const password = promptHidden(`Password for ${email}: `);
+    if (password.length < 10) {
+      console.error(
+        `  Too short (${password.length}). Use at least 10 characters — ` +
+          "this is the only lock on the data. Try again.",
+      );
+      continue;
+    }
+    const again = promptHidden("Again: ");
+    if (password !== again) {
+      console.error("  Those did not match. Try again.");
+      continue;
+    }
+    return password;
+  }
 }
-const again = promptHidden("Again: ");
-if (password !== again) {
-  console.error("The two passwords do not match.");
-  Deno.exit(1);
-}
+
+const password = askForPassword();
 
 const clientSecret = await deriveClientSecret(password, email);
 const credential = await createCredential(clientSecret);
