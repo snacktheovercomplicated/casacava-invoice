@@ -10,7 +10,8 @@
     "ui:check": "deno run -A tools/ui_check.ts",
     "samples": "deno run -A tools/make_sample_pdfs.ts",
     "tauri": "deno run -A npm:@tauri-apps/cli",
-    "deploy": "deno run -A npm:wrangler deploy"
+    "deploy": "deno run -A npm:wrangler deploy",
+    "setup": "bash tools/setup_cloudflare.sh"
   },
   "fmt": {
     "lineWidth": 90
