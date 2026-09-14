@@ -1,0 +1,135 @@
+# Builds the three packaged apps.
+#
+# Nothing is built on Omar's machine: Tauri's toolchain is 15-20 GB and his
+# disk does not have it. GitHub gives a Windows runner and a Linux runner for
+# free, so the Windows installer is built on actual Windows rather than
+# cross-compiled, which is one less thing to go wrong.
+#
+# Run it from the Actions tab (Run workflow), or push a tag like v1.0.0 to get
+# a release with all three files attached.
+
+name: Package
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+# The packaged apps talk to the deployed Worker, which is a different origin
+# from the app itself, so they need the API address compiled in.
+env:
+  VITE_API_BASE: https://casacava-invoice.workers.dev
+
+jobs:
+  windows:
+    name: Windows installer
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - name: Build the web app
+        run: deno task build:web
+      - name: Build the installer
+        run: deno run -A npm:@tauri-apps/cli build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CasaCava-Invoices-Windows
+          path: |
+            src-tauri/target/release/bundle/nsis/*.exe
+            src-tauri/target/release/bundle/msi/*.msi
+          if-no-files-found: error
+
+  linux:
+    name: Linux AppImage
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - name: Install the GTK and WebKit libraries Tauri needs
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev \
+            librsvg2-dev patchelf libssl-dev
+      - name: Build the web app
+        run: deno task build:web
+      - name: Build the AppImage
+        run: deno run -A npm:@tauri-apps/cli build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CasaCava-Invoices-Linux
+          path: src-tauri/target/release/bundle/appimage/*.AppImage
+          if-no-files-found: error
+
+  android:
+    name: Android APK
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+      - name: Install the Android NDK
+        run: sdkmanager "ndk;27.2.12479018"
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - name: Build the web app
+        run: deno task build:web
+      - name: Build the APK
+        env:
+          NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.2.12479018
+        run: |
+          deno run -A npm:@tauri-apps/cli android init
+          deno run -A npm:@tauri-apps/cli android build --apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CasaCava-Invoices-Android
+          path: src-tauri/gen/android/app/build/outputs/apk/universal/release/*.apk
+          if-no-files-found: error
+
+  release:
+    name: Attach everything to the release
+    needs: [windows, linux, android]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: packages
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: packages/**/*
+          body: |
+            Unsigned builds. On first run you will see a warning:
+
+            - **Windows** — SmartScreen says "Windows protected your PC".
+              Click *More info*, then *Run anyway*.
+            - **Android** — "For your security, your phone is not allowed to
+              install unknown apps from this source". Allow it for the app you
+              are installing from (usually Files or Chrome), then tap install.
+            - **Linux** — `chmod +x` the AppImage before running it.
+
+            These warnings are because the files are not signed by a paid
+            certificate, not because anything is wrong with them.

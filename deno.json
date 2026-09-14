@@ -1,0 +1,19 @@
+{
+  "tasks": {
+    "test": "deno test --allow-all",
+    "check": "deno check src/lib/*.ts tools/*.ts tests/*.ts",
+    "fmt": "deno fmt src tools tests",
+    "import-items": "deno run --allow-read tools/import_items.ts db/seed_items.csv",
+    "dev:web": "cd web && deno run -A npm:vite",
+    "build:web": "cd web && deno run -A npm:vite build",
+    "dev:server": "deno run -A tools/dev_server.ts",
+    "ui:check": "deno run -A tools/ui_check.ts",
+    "samples": "deno run -A tools/make_sample_pdfs.ts",
+    "tauri": "deno run -A npm:@tauri-apps/cli",
+    "deploy": "deno run -A npm:wrangler deploy"
+  },
+  "fmt": {
+    "lineWidth": 90
+  },
+  "lock": false
+}

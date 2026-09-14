@@ -1,0 +1,10 @@
+{
+  "name": "Casa Cava Invoices",
+  "short_name": "Casa Cava",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#a06e4e",
+  "dir": "auto",
+  "icons": []
+}

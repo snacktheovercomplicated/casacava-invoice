@@ -1,0 +1,17 @@
+# Dependencies and build output
+web/node_modules/
+web/dist/
+node_modules/
+src-tauri/target/
+src-tauri/gen/
+
+# Generated PDFs — samples are produced on demand, not kept in the repo
+samples/
+
+# Local Cloudflare state
+.wrangler/
+.dev.vars
+
+# Editor and OS noise
+.DS_Store
+*.swp
